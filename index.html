@@ -149,7 +149,7 @@
   <button class='ib' id='bPhoto' title='Photo'><svg viewBox='0 0 24 24'><use href='#i-photo'/></svg></button>
   <button class='ib' id='bRec' title='Record video'><svg viewBox='0 0 24 24'><use href='#i-rec'/></svg><span class='lb'></span></button>
 </div>
-<audio id='bgm' src='assets/diwali.mp3' loop preload='auto'></audio>
+<audio id='bgm' src='assets/diwali.mp3' loop preload='none'></audio>
 <div class='pill r glass'>
   <button class='ib' id='bFlip' title='Flip camera'><svg viewBox='0 0 24 24'><use href='#i-flip'/></svg></button>
   <button class='ib' id='bMus' title='Music'><svg class='s-on' viewBox='0 0 24 24'><use href='#i-note'/></svg><svg class='s-off' viewBox='0 0 24 24'><use href='#i-noteoff'/></svg></button>
@@ -285,18 +285,21 @@ const snd = {
     if (this.ctx) { this.ctx.resume && this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     const c = this.ctx = new AC();
-    const comp = c.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 6;
-    this.master = c.createGain(); this.master.gain.value = this.on ? .9 : 0;
-    this.master.connect(comp); comp.connect(c.destination);
-    try {
-      const rl = (c.sampleRate * 1.7) | 0, ir = c.createBuffer(2, rl, c.sampleRate);
-      for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < rl; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rl, 2.8); }
-      const conv = c.createConvolver(); conv.buffer = ir; const wet = c.createGain(); wet.gain.value = .3;
+    // bus: sources -> comp (glue) -> lim (brick-wall, stops clipping crackle) -> speakers + recorder
+    const comp = c.createDynamicsCompressor(); comp.threshold.value = -18; comp.knee.value = 12; comp.ratio.value = 5; comp.attack.value = .004; comp.release.value = .22;
+    const lim = c.createDynamicsCompressor(); lim.threshold.value = -4; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = .001; lim.release.value = .1;
+    comp.connect(lim); lim.connect(c.destination);
+    this.master = c.createGain(); this.master.gain.value = this.on ? .8 : 0;
+    this.master.connect(comp);
+    try {   // light reverb: short mono tail (a long stereo one is heavy for phones)
+      const rl = (c.sampleRate * .6) | 0, ir = c.createBuffer(1, rl, c.sampleRate), d = ir.getChannelData(0);
+      for (let i = 0; i < rl; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rl, 3);
+      const conv = c.createConvolver(); conv.buffer = ir; const wet = c.createGain(); wet.gain.value = .22;
       this.master.connect(conv); conv.connect(wet); wet.connect(comp);
     } catch (e) {}
-    try { this.dest = c.createMediaStreamDestination(); comp.connect(this.dest); } catch (e) {}
-    try { const ms = c.createMediaElementSource($('#bgm')); this.mg = c.createGain(); this.mg.gain.value = .5; ms.connect(this.mg); this.mg.connect(comp); }
-    catch (e) { $('#bgm').volume = .5; }
+    try { this.dest = c.createMediaStreamDestination(); lim.connect(this.dest); } catch (e) {}
+    this.mg = c.createGain(); this.mg.gain.value = .5; this.mg.connect(comp);
+    this.loadMusic();
     const len = c.sampleRate * 2;
     const nb = c.createBuffer(1, len, c.sampleRate), nd = nb.getChannelData(0);
     for (let i = 0; i < len; i++) nd[i] = Math.random() * 2 - 1;
@@ -308,14 +311,40 @@ const snd = {
     }
     this.crackle = cb; c.resume && c.resume();
   },
-  setOn(v) { this.on = v; if (this.master) this.master.gain.value = v ? .9 : 0; },
+  setOn(v) { this.on = v; if (this.master) this.master.gain.value = v ? .8 : 0; },
+  act: 0, gate: {},
+  _full(n) { return this.act > n; },                 // too many sounds playing: skip minor ones instead of crackling
+  _gate(k, ms) { const t = performance.now(); if (t - (this.gate[k] || 0) < ms) return false; this.gate[k] = t; return true; },
+  /* music: decoded once and looped from memory (gapless; an <audio loop> clicks at every restart) */
+  loadMusic() {
+    const c = this.ctx; if (this.mbuf || this.mload) return; this.mload = true;
+    fetch('assets/diwali.mp3').then(r => r.arrayBuffer())
+      .then(ab => new Promise((ok, no) => { const p = c.decodeAudioData(ab, ok, no); p && p.catch && p.catch(no); }))
+      .then(b => { this.mbuf = b; this.mload = false; this.musicPlay(); })
+      .catch(() => {
+        this.mload = false; this.mfail = true;
+        try { const ms = c.createMediaElementSource($('#bgm')); ms.connect(this.mg); } catch (e) { $('#bgm').volume = .5; }
+        this.musicPlay();
+      });
+  },
+  musicPlay() {
+    if (!this.ctx || !musOn) return;
+    if (this.mbuf) {
+      if (!this.msrc) { const s = this.ctx.createBufferSource(); s.buffer = this.mbuf; s.loop = true; s.connect(this.mg); s.start(); this.msrc = s; }
+    } else if (this.mfail) { const a = $('#bgm'); if (a.paused) { const r = a.play(); r && r.catch && r.catch(() => {}); } }
+  },
+  musicStop() {
+    if (this.msrc) { try { this.msrc.stop(); } catch (e) {} this.msrc = null; }
+    $('#bgm').pause();
+  },
   _env(g, t, a, peak, d) {
     g.gain.setValueAtTime(.0001, t);
     g.gain.exponentialRampToValueAtTime(Math.max(peak, .0002), t + a);
     g.gain.exponentialRampToValueAtTime(.0001, t + a + d);
   },
   _noise(buf, t, dur, off) {
-    const s = this.ctx.createBufferSource(); s.buffer = buf; s.start(t, off == null ? Math.random() * 0.8 : off); s.stop(t + dur); return s;
+    const s = this.ctx.createBufferSource(); s.buffer = buf; this.act++; s.onended = () => { this.act--; };
+    s.start(t, off == null ? Math.random() * 0.8 : off); s.stop(t + dur); return s;
   },
   _ok() { return this.ctx && this.on; },
   boom(size = 1) {
@@ -333,7 +362,7 @@ const snd = {
     k.connect(kf).connect(kg).connect(this.master);
   },
   bang(size = 1) {   // short sharp cracker pop
-    if (!this._ok()) return; const c = this.ctx, t = c.currentTime;
+    if (!this._ok() || this._full(26) || !this._gate('bang', 45)) return; const c = this.ctx, t = c.currentTime;
     const n = this._noise(this.noise, t, .25), f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = rand(1800, 4200); f.Q.value = .6;
     const g = c.createGain(); this._env(g, t, .002, .8 * size, .14); n.connect(f).connect(g).connect(this.master);
     const o = c.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(50, t + .1);
@@ -364,7 +393,7 @@ const snd = {
     const kg = c.createGain(); this._env(kg, t, .05, .3, dur - .05); k.connect(kf).connect(kg).connect(this.master);
   },
   sparkle() {
-    if (!this._ok()) return; const c = this.ctx, t = c.currentTime;
+    if (!this._ok() || this._full(22) || !this._gate('sparkle', 80)) return; const c = this.ctx, t = c.currentTime;
     const k = this._noise(this.crackle, t, .9, Math.random()), f = c.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 2000;
     const g = c.createGain(); this._env(g, t, .02, .35, .7); k.connect(f).connect(g).connect(this.master);
   },
@@ -647,7 +676,7 @@ class Rocket {
   }
   draw0() {
     const im = IM.rocket; if (!im) return;
-    const nz = im.height * 123 / 293, sc = 54 * S / nz, w = im.width * sc, h = im.height * sc;
+    const nz = im.height * 123 / 293, sc = 72 * S / nz, w = im.width * sc, h = im.height * sc;
     ctxB.save(); ctxB.translate(this.x, this.y); ctxB.rotate(this.ang);
     ctxB.drawImage(im, -w * .5, -nz * sc, w, h); ctxB.restore();
   }
@@ -967,8 +996,8 @@ function say(msg, retry) {
   clearTimeout(toastT); toastT = setTimeout(() => t.style.display = 'none', retry ? 9000 : 1800);
 }
 let musOn = true;
-const playMusic = () => { const a = $('#bgm'); if (musOn && a.paused) { const r = a.play(); r && r.catch && r.catch(() => {}); } };
-$('#bMus').onclick = e => { musOn = !musOn; e.currentTarget.classList.toggle('off', !musOn); if (musOn) playMusic(); else $('#bgm').pause(); };
+const playMusic = () => snd.musicPlay();
+$('#bMus').onclick = e => { musOn = !musOn; e.currentTarget.classList.toggle('off', !musOn); if (musOn) playMusic(); else snd.musicStop(); };
 $('#bSnd').onclick = e => { snd.setOn(!snd.on); e.currentTarget.classList.toggle('off', !snd.on); };
 $('#bGlow').onclick = e => { const n = document.body.classList.toggle('noblend'); e.currentTarget.classList.toggle('on', !n); };
 $('#bFlash').onclick = e => { reduceFlash = !reduceFlash; e.currentTarget.classList.toggle('on', reduceFlash); };
@@ -1049,7 +1078,7 @@ async function startCamera() {
 $('#bFlip').onclick = async () => { facing = facing === 'environment' ? 'user' : 'environment'; await startCamera(); };
 document.addEventListener('visibilitychange', () => {
   if (snd.ctx) document.hidden ? snd.ctx.suspend() : snd.ctx.resume();
-  if (document.hidden) $('#bgm').pause(); else if (started) playMusic();
+  if (document.hidden) { if (snd.mfail) $('#bgm').pause(); } else if (started) playMusic();
   if (!document.hidden && started && stream && !stream.getVideoTracks().some(t => t.readyState === 'live')) startCamera();
 });
 
@@ -1083,11 +1112,12 @@ function showShot(blob, kind) {
   shotBlob = blob; if (shotUrl) URL.revokeObjectURL(shotUrl); shotUrl = URL.createObjectURL(blob);
   const prev = $('#prev'); prev.innerHTML = '';
   const el = document.createElement(kind === 'photo' ? 'img' : 'video'); el.src = shotUrl;
-  if (kind !== 'photo') { el.controls = true; el.loop = true; el.muted = true; el.playsInline = true; el.autoplay = true; }
+  if (kind !== 'photo') { el.controls = true; el.loop = true; el.muted = false; el.playsInline = true; snd.musicStop(); }
   prev.appendChild(el); $('#shot').style.display = 'grid';
+  if (kind !== 'photo') { const r = el.play(); r && r.catch && r.catch(() => { el.muted = true; el.play().catch(() => {}); }); }
 }
 const shotName = () => 'diwali-crackers-' + Date.now() + (shotBlob.type.includes('mp4') ? '.mp4' : shotBlob.type.includes('webm') ? '.webm' : '.jpg');
-$('#shClose').onclick = () => { $('#shot').style.display = 'none'; $('#prev').innerHTML = ''; };
+$('#shClose').onclick = () => { $('#shot').style.display = 'none'; $('#prev').innerHTML = ''; if (started) playMusic(); };
 $('#shSave').onclick = () => {
   const a = document.createElement('a'); a.href = shotUrl; a.download = shotName(); document.body.appendChild(a); a.click(); a.remove(); say('Saved');
 };
@@ -1109,9 +1139,10 @@ $('#bRec').onclick = () => {
   const sc = Math.min(2, 1280 / Math.max(W, H)), cw = Math.round(W * sc), ch = Math.round(H * sc);
   const comp = document.createElement('canvas'); comp.width = cw; comp.height = ch; const c2 = comp.getContext('2d');
   const stream2 = comp.captureStream(30);
+  if (snd.ctx && snd.ctx.resume) snd.ctx.resume();
   if (snd.dest) snd.dest.stream.getAudioTracks().forEach(t => stream2.addTrack(t));
-  const mime = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(t => MediaRecorder.isTypeSupported(t));
-  let mr; try { mr = new MediaRecorder(stream2, mime ? { mimeType: mime, videoBitsPerSecond: 4e6 } : { videoBitsPerSecond: 4e6 }); } catch (e) { say('Could not start recording'); return; }
+  const mime = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(t => MediaRecorder.isTypeSupported(t));
+  let mr; try { mr = new MediaRecorder(stream2, mime ? { mimeType: mime, videoBitsPerSecond: 3e6, audioBitsPerSecond: 128000 } : { videoBitsPerSecond: 3e6, audioBitsPerSecond: 128000 }); } catch (e) { say('Could not start recording'); return; }
   const chunks = [], r = { mr, raf: 0, tm: 0, t0: performance.now() }; rec = r;
   mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   mr.onstop = () => {
@@ -1152,7 +1183,7 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-window.__crackers = { ori, anchorShift, fire, setMode: m => mode = m, begin, shiftWorld, stats: () => ({ parts: parts.length, things: things.length, quality, x: things[0] && things[0].x, y: things[0] && things[0].y, oriHave: ori.have }) };
+window.__crackers = { snd, IM, ori, anchorShift, fire, setMode: m => mode = m, begin, shiftWorld, stats: () => ({ parts: parts.length, things: things.length, quality, x: things[0] && things[0].x, y: things[0] && things[0].y, oriHave: ori.have }) };
 })();
 </script>
 </body>
