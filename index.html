@@ -80,12 +80,30 @@
   #toast{position:fixed;top:calc(64px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:7;max-width:calc(100vw - 24px);width:max-content;
     font-size:13px;line-height:1.4;text-align:center;letter-spacing:.02em;padding:9px 16px;border-radius:20px;display:none;pointer-events:auto}
   #toast button{margin-left:10px;border:0;border-radius:12px;padding:4px 12px;font-weight:500;background:var(--gold);color:#1a1204}
+
+  /* desktop / laptop: roomier, centred dock, bigger controls */
+  @media (min-width:760px) and (hover:hover) and (pointer:fine){
+    .pill{top:20px;padding:6px;border-radius:30px;gap:4px}.pill.l{left:22px}.pill.r{right:22px}
+    .ib{width:48px;height:48px}.ib svg{width:23px;height:23px}.ib:hover{background:rgba(233,201,130,.12);color:var(--gold)}
+    #bRec.rec{padding:0 18px 0 12px;border-radius:24px}
+    #menu{top:86px;right:22px;width:320px;border-radius:24px}
+    #menu .row{padding:14px 16px}#menu .row b{font-size:15px}#menu .row small{font-size:12.5px}
+    .dock{padding-bottom:26px}
+    #bar{width:auto;max-width:none;padding:8px;gap:6px;border-radius:36px;overflow:visible}
+    .m{flex:0 0 auto;min-width:96px;max-width:none;padding:14px 0 12px;border-radius:28px;gap:8px;font-size:11.5px;letter-spacing:.1em;cursor:pointer}
+    .m svg{width:30px;height:30px}
+    .m:hover{color:var(--ivory);background:rgba(246,236,214,.06)}
+    .m.on:hover{color:var(--gold)}
+    .m.on::after{bottom:5px;width:4px;height:4px}
+    #hint{bottom:150px;font-size:26px}#hint::before,#hint::after{width:40px;margin:0 18px}
+    #toast{top:90px;font-size:14.5px}
+  }
   #dbg{position:fixed;left:8px;bottom:calc(110px + env(safe-area-inset-bottom));z-index:8;font:11px/1.35 ui-monospace,Menlo,monospace;
     background:rgba(0,0,0,.6);padding:5px 8px;border-radius:8px;pointer-events:none;white-space:pre;display:none}
 
   #start{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;overflow:hidden;
     background:radial-gradient(ellipse at 50% 38%,#1b1840 0%,#0b1230 48%,#04060f 100%)}
-  .mandala{position:absolute;left:50%;top:44%;width:150vmin;height:150vmin;max-width:900px;max-height:900px;margin:-75vmin 0 0 -75vmin;opacity:.085;animation:spin 140s linear infinite;pointer-events:none}
+  .mandala{position:absolute;left:50%;top:44%;--md:min(150vmin,900px);width:var(--md);height:var(--md);margin:calc(var(--md) / -2) 0 0 calc(var(--md) / -2);opacity:.085;animation:spin 140s linear infinite;pointer-events:none}
   @keyframes spin{to{transform:rotate(360deg)}}
   #embers{position:absolute;inset:0;pointer-events:none}
   #embers i{position:absolute;bottom:-10px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px 1px rgba(233,201,130,.7);opacity:0;animation:rise linear infinite}
@@ -991,6 +1009,18 @@ $('#bar').addEventListener('click', e => {
   document.querySelectorAll('#bar button').forEach(x => x.classList.toggle('on', x === b));
 });
 
+
+// desktop: click hint + keys 1-7 pick the cracker, M music, Esc closes menu
+if (matchMedia('(hover:hover) and (pointer:fine)').matches) {
+  $('#hint').textContent = 'Click anywhere to light  ·  keys 1–7 switch crackers';
+  addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey || /input|textarea|select/i.test((e.target.tagName || ''))) return;
+    const n = +e.key;
+    if (n >= 1 && n <= 7) { const b = document.querySelectorAll('#bar button')[n - 1]; if (b) b.click(); }
+    else if (e.key === 'm' || e.key === 'M') { const b = $('#bMus'); b && b.click(); }
+    else if (e.key === 'Escape') { $('#menu').classList.remove('open'); $('#bTune').classList.remove('hot'); }
+  });
+}
 let toastT;
 function say(msg, retry) {
   const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
