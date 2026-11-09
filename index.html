@@ -98,6 +98,30 @@
     #hint{bottom:150px;font-size:26px}#hint::before,#hint::after{width:40px;margin:0 18px}
     #toast{top:90px;font-size:14.5px}
   }
+
+  /* guided tour */
+  #tour{position:fixed;inset:0;z-index:30;display:none}#tour.on{display:block}
+  #tRing{position:fixed;border-radius:22px;pointer-events:none;box-shadow:0 0 0 100vmax rgba(4,7,20,.74),0 0 0 2px var(--gold),0 0 30px 4px rgba(233,201,130,.45);
+    transition:left .35s,top .35s,width .35s,height .35s,border-radius .35s}
+  #tRing.nf{box-shadow:0 0 0 100vmax rgba(4,7,20,.62)}
+  #tCard{position:fixed;left:50%;width:min(372px,calc(100vw - 24px));margin-left:calc(min(372px,calc(100vw - 24px)) / -2);padding:18px 18px 14px;border-radius:24px;
+    transition:top .35s;animation:tin .35s both}
+  @keyframes tin{from{opacity:0;transform:translateY(8px)}}
+  #tCard .tk{display:flex;justify-content:space-between;align-items:center;font:500 10.5px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+  #tCard .tx{border:0;background:transparent;color:var(--mute);font:500 11px var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:6px 2px}
+  #tCard h3{font:500 27px/1.1 var(--serif);margin:8px 0 8px;color:var(--ivory)}
+  #tBody{font-size:14px;line-height:1.55;color:rgba(246,236,214,.86)}
+  #tBody p{margin:0}#tBody p+p{margin-top:8px}
+  #tBody ul{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:7px;font-size:13px;line-height:1.4}
+  #tBody li{display:block}#tBody li b{color:var(--gold);font-weight:500;letter-spacing:.03em}#tBody li b::after{content:' \2014\00a0';color:var(--mute);font-weight:400}
+  #tBody .tip{margin-top:10px;padding:8px 10px;border-radius:12px;background:rgba(233,201,130,.09);border:1px solid rgba(233,201,130,.16);font-size:12.5px;color:var(--mute)}
+  #tCard .tf{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+  #tDots{display:flex;gap:6px}#tDots i{width:6px;height:6px;border-radius:50%;background:rgba(246,236,214,.25);transition:all .25s}#tDots i.on{width:18px;border-radius:4px;background:var(--gold)}
+  #tCard .tb{display:flex;gap:8px}
+  #tCard .tg,#tCard .tp{border:0;border-radius:18px;padding:10px 18px;font:500 12.5px var(--sans);letter-spacing:.08em;text-transform:uppercase}
+  #tCard .tg{background:rgba(246,236,214,.08);color:var(--ivory)}
+  #tCard .tp{background:linear-gradient(180deg,#f1d99a,#d6aa58);color:#1a1204}
+  @media (min-width:760px){#tCard{width:420px;margin-left:-210px;padding:22px 24px 18px}#tCard h3{font-size:32px}#tBody{font-size:15px}#tBody ul{font-size:14px}}
   #dbg{position:fixed;left:8px;bottom:calc(110px + env(safe-area-inset-bottom));z-index:8;font:11px/1.35 ui-monospace,Menlo,monospace;
     background:rgba(0,0,0,.6);padding:5px 8px;border-radius:8px;pointer-events:none;white-space:pre;display:none}
 
@@ -148,6 +172,7 @@
   <symbol id='i-mute' viewBox='0 0 24 24'><path d='M4 10v4h3.5l4.5 4V6L7.5 10z'/><path d='M16 9.5l5 5M21 9.5l-5 5'/></symbol>
   <symbol id='i-note' viewBox='0 0 24 24'><path d='M9.5 17.5V6l9-2v11.5'/><circle cx='7.3' cy='17.7' r='2.3'/><circle cx='16.3' cy='15.7' r='2.3'/></symbol>
   <symbol id='i-noteoff' viewBox='0 0 24 24'><path d='M9.5 17.5V6l9-2v11.5'/><circle cx='7.3' cy='17.7' r='2.3'/><circle cx='16.3' cy='15.7' r='2.3'/><path d='M4 4l16 16'/></symbol>
+  <symbol id='i-help' viewBox='0 0 24 24'><circle cx='12' cy='12' r='8.6'/><path d='M9.6 9.6a2.5 2.5 0 1 1 3.6 2.2c-.8.5-1.2 1-1.2 1.9'/><circle cx='12' cy='16.6' r='.6' fill='currentColor'/></symbol>
   <symbol id='i-tune' viewBox='0 0 24 24'><path d='M4 7h8.5M17.5 7H20M4 17h2.5M11.5 17H20'/><circle cx='15' cy='7' r='2.4'/><circle cx='9' cy='17' r='2.4'/></symbol>
   <symbol id='i-mix' viewBox='0 0 24 24'><path d='M12 3c.8 4.8 2.4 6.4 7.2 7.2-4.8.8-6.4 2.4-7.2 7.2-.8-4.8-2.4-6.4-7.2-7.2C9.6 9.4 11.2 7.8 12 3z'/><path d='M19 16.5v4M17 18.5h4'/></symbol>
   <symbol id='i-anaar' viewBox='0 0 24 24'><path d='M8.6 21h6.8l-1.3-6.4h-4.2z'/><path d='M12 12.6V4M12 12.6L8.3 6M12 12.6l3.7-6.6M12 12.6L5.8 9.8M12 12.6l6.2-2.8'/></symbol>
@@ -171,6 +196,7 @@
 </div>
 <audio id='bgm' src='assets/diwali.mp3' loop preload='none'></audio>
 <div class='pill r glass'>
+  <button class='ib' id='bHelp' title='How to use'><svg viewBox='0 0 24 24'><use href='#i-help'/></svg></button>
   <button class='ib' id='bFlip' title='Flip camera'><svg viewBox='0 0 24 24'><use href='#i-flip'/></svg></button>
   <button class='ib' id='bMus' title='Music'><svg class='s-on' viewBox='0 0 24 24'><use href='#i-note'/></svg><svg class='s-off' viewBox='0 0 24 24'><use href='#i-noteoff'/></svg></button>
   <button class='ib' id='bSnd' title='Sound'><svg class='s-on' viewBox='0 0 24 24'><use href='#i-snd'/></svg><svg class='s-off' viewBox='0 0 24 24'><use href='#i-mute'/></svg></button>
@@ -183,6 +209,13 @@
   <button class='row' id='bAnchor'><span><b>Pin to surroundings</b><small>Keeps sparks put as you turn</small></span><i class='sw'></i></button>
 </div>
 <div id='toast' class='glass'></div>
+<div id='tour' aria-live='polite'><div id='tRing'></div>
+  <div id='tCard' class='glass' role='dialog' aria-label='How to use Diwali Crackers'>
+    <div class='tk'><span id='tStep'></span><button id='tSkip' class='tx'>Skip</button></div>
+    <h3 id='tTitle'></h3><div id='tBody'></div>
+    <div class='tf'><div id='tDots'></div><div class='tb'><button id='tBack' class='tg'>Back</button><button id='tNext' class='tp'>Next</button></div></div>
+  </div>
+</div>
 <div id='dbg'></div>
 <div id='hint'>Tap anywhere to light</div>
 
@@ -1021,6 +1054,64 @@ if (matchMedia('(hover:hover) and (pointer:fine)').matches) {
     else if (e.key === 'Escape') { $('#menu').classList.remove('open'); $('#bTune').classList.remove('hot'); }
   });
 }
+
+/* ---------- first-run guide + help ---------- */
+const TOUCH = !matchMedia('(hover:hover) and (pointer:fine)').matches, TAP = TOUCH ? 'Tap' : 'Click';
+const TOUR = [
+  { k: 'Welcome', t: 'Light up your night', b: () => '<p>Diwali Crackers turns your camera into a sky you can light up with Anaar, Chakri, Rockets, Phooljhari, Ladi and Sutli bombs.</p><p>This 1-minute guide shows you how everything works.</p><div class="tip">When asked, allow camera access so the sparks appear over your surroundings. No camera? You can still play on the night sky.</div>' },
+  { k: 'Step 1', t: TAP + ' to light', demo: 'anaar', b: () => '<p>' + TAP + ' anywhere on the screen and the selected cracker lights right where you ' + (TOUCH ? 'touched' : 'clicked') + '.</p><p>You can set off as many as you like. Watch the Anaar fountain going off behind this card.</p>' },
+  { k: 'Step 2', t: 'Choose your cracker', sel: '#bar', b: () => '<p>Pick a cracker from the bar at the bottom.' + (TOUCH ? '' : ' On a computer, keys 1 to 7 do the same.') + '</p><ul><li><b>Mix</b><span>A surprise from the whole range</span></li><li><b>Anaar</b><span>Fountain of sparks and tall flame</span></li><li><b>Chakri</b><span>Spins on the ground, flames shoot outward</span></li><li><b>Rocket</b><span>Climbs high, then bursts</span></li><li><b>Spark</b><span>Phooljhari: press and drag to draw with sparks</span></li><li><b>Ladi</b><span>A long string of crackers going off</span></li><li><b>Sutli</b><span>Jute bomb with a big blast</span></li></ul>' },
+  { k: 'Step 3', t: 'Take a photo', sel: '#bPhoto', b: () => '<p>Captures what you see, camera and sparks together. You can save it or share it straight away.</p>' },
+  { k: 'Step 4', t: 'Record a video', sel: '#bRec', b: () => '<p>' + TAP + ' once to start recording and again to stop. The video includes the crackers\' sound and the music.</p><div class="tip">After you stop, a preview opens. Use Save or Share from there.</div>' },
+  { k: 'Step 5', t: 'Camera, music and sound', sel: '.pill.r', b: () => '<ul><li><b>Help</b><span>Open this guide again any time</span></li><li><b>Flip</b><span>Switch between front and back camera</span></li><li><b>Music</b><span>Turn the background music on or off</span></li><li><b>Sound</b><span>Mute or unmute the cracker sounds</span></li><li><b>Settings</b><span>More options, see next step</span></li></ul>' },
+  { k: 'Step 6', t: 'Fine-tune the look', sel: '#bTune', b: () => '<ul><li><b>Night mode</b><span>Calms a bright camera picture so sparks stand out</span></li><li><b>Glow boost</b><span>Light blends into the scene</span></li><li><b>Soft flashes</b><span>Fewer bright bursts, easier on the eyes</span></li><li><b>Pin to surroundings</b><span>Keeps sparks in place as you turn your phone</span></li></ul>' },
+  { k: 'All set', t: 'Enjoy, and stay safe', b: () => '<p>Pick a cracker, ' + TAP.toLowerCase() + ' the sky and enjoy the show. Shubh Deepavali!</p><div class="tip">This is a virtual experience, so nothing here can hurt anyone. Real crackers: keep a safe distance and follow local rules.</div>' }
+];
+let tourI = 0;
+function tourPlace() {
+  const st = TOUR[tourI], ring = $('#tRing'), card = $('#tCard'), vw = innerWidth, vh = innerHeight;
+  const el = st.sel && document.querySelector(st.sel);
+  let r = null;
+  if (el) { const b = el.getBoundingClientRect(); const p = el.id === 'bar' ? 4 : 6; r = { l: b.left - p, t: b.top - p, w: b.width + 2 * p, h: b.height + 2 * p }; }
+  ring.classList.toggle('nf', !r);
+  if (r) { ring.style.left = r.l + 'px'; ring.style.top = r.t + 'px'; ring.style.width = r.w + 'px'; ring.style.height = r.h + 'px'; ring.style.borderRadius = Math.min(28, r.h / 2) + 'px'; }
+  else { ring.style.left = vw / 2 + 'px'; ring.style.top = vh / 2 + 'px'; ring.style.width = '0px'; ring.style.height = '0px'; }
+  const ch = card.offsetHeight; let top;
+  if (!r) top = (vh - ch) / 2;
+  else if (r.t + r.h / 2 < vh / 2) top = r.t + r.h + 16;
+  else top = r.t - ch - 16;
+  card.style.top = Math.max(12, Math.min(vh - ch - 12, top)) + 'px';
+}
+function tourShow() {
+  const st = TOUR[tourI];
+  $('#tStep').textContent = st.k === 'Welcome' || st.k === 'All set' ? st.k : st.k + ' of ' + (TOUR.length - 2);
+  $('#tTitle').textContent = st.t; $('#tBody').innerHTML = st.b();
+  $('#tDots').innerHTML = TOUR.map((_, i) => '<i class="' + (i === tourI ? 'on' : '') + '"></i>').join('');
+  $('#tBack').style.visibility = tourI ? 'visible' : 'hidden';
+  $('#tNext').textContent = tourI === TOUR.length - 1 ? 'Start playing' : tourI === 0 ? 'Show me' : 'Next';
+  $('#tSkip').style.visibility = tourI === TOUR.length - 1 ? 'hidden' : 'visible';
+  const c = $('#tCard'); c.style.animation = 'none'; c.offsetHeight; c.style.animation = '';
+  tourPlace();
+  if (st.demo) setTimeout(() => { if ($('#tour').classList.contains('on') && TOUR[tourI] === st) fire(W / 2, H * .62, st.demo); }, 450);
+}
+function tourOpen() { tourI = 0; $('#tour').classList.add('on'); $('#menu').classList.remove('open'); $('#bTune').classList.remove('hot'); tourShow(); }
+function tourClose() {
+  $('#tour').classList.remove('on');
+  try { localStorage.setItem('dc_tour_done', '1'); } catch (e) {}
+}
+function tourStep(d) { const n = tourI + d; if (n < 0) return; if (n >= TOUR.length) { tourClose(); return; } tourI = n; tourShow(); }
+function tourAuto() { let done = false; try { done = !!localStorage.getItem('dc_tour_done'); } catch (e) {} if (!done) setTimeout(tourOpen, 700); }
+$('#tNext').onclick = () => tourStep(1);
+$('#tBack').onclick = () => tourStep(-1);
+$('#tSkip').onclick = tourClose;
+$('#bHelp').onclick = e => { e.stopPropagation(); tourOpen(); };
+addEventListener('resize', () => { if ($('#tour').classList.contains('on')) tourPlace(); });
+addEventListener('keydown', e => {
+  if ($('#tour').classList.contains('on')) {
+    if (e.key === 'ArrowRight' || e.key === 'Enter') tourStep(1); else if (e.key === 'ArrowLeft') tourStep(-1); else if (e.key === 'Escape') tourClose();
+    e.stopImmediatePropagation(); e.preventDefault();
+  } else if ((e.key === '?' || e.key === 'h' || e.key === 'H') && !e.ctrlKey && !e.metaKey && !e.altKey && started) tourOpen();
+}, true);
 let toastT;
 function say(msg, retry) {
   const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
@@ -1114,7 +1205,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && started && stream && !stream.getVideoTracks().some(t => t.readyState === 'live')) startCamera();
 });
 
-function begin() { started = true; $('#start').style.display = 'none'; snd.init(); playMusic(); }
+function begin() { started = true; $('#start').style.display = 'none'; snd.init(); playMusic(); tourAuto(); }
 $('#go').onclick = async () => {
   snd.init(); playMusic(); $('#go').textContent = 'Starting…';
   const anchorP = wantAnchor(true);   // must be requested inside the tap for iOS
