@@ -153,8 +153,9 @@
     background:linear-gradient(135deg,#f4dca0,#d9ad5c);color:#1a1204;box-shadow:0 8px 30px rgba(233,201,130,.25),inset 0 1px 0 rgba(255,255,255,.5)}
   #go:active{transform:scale(.98)}
   #nocam{display:block;width:100%;margin-top:6px;border:0;background:transparent;padding:14px;font:400 12.5px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
-  #start .by{display:inline-block;margin-top:12px;font:500 12px/1 var(--sans);letter-spacing:.12em;color:rgba(233,201,130,.7);text-decoration:none;padding:6px 4px;transition:color .2s}
-  #start .by:hover{color:var(--gold)}
+  #start .by{margin-top:12px;font:500 12px/1 var(--sans);letter-spacing:.12em;color:rgba(233,201,130,.7)}
+  #start .by a{color:var(--gold);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;padding:6px 2px;transition:color .2s}
+  #start .by a:hover{color:#fff3cf}
   #start .fine{font-size:11px;line-height:1.6;color:rgba(246,236,214,.4);margin-top:14px;letter-spacing:.03em}
   /* desktop start screen: larger type, scales with window height */
   @media (min-width:760px) and (hover:hover) and (pointer:fine){
@@ -279,7 +280,7 @@
     <button id='go'>Begin</button>
     <button id='nocam'>Continue without camera</button>
     <div class='fine'>Video stays on your device. Contains bright flashes;<br>soften them any time in settings.</div>
-    <a class='by' href='https://x.com/deeprajO1' target='_blank' rel='noopener'>Made by @deeprajO1</a>
+    <div class='by'>Made by <a href='https://x.com/deeprajO1' target='_blank' rel='noopener'>@deeprajO1</a></div>
   </div>
 </div>
 
