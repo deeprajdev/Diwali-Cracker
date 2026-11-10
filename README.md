@@ -47,3 +47,4 @@ It is a static site, so any static host works. On Vercel: import the repo, leave
 
 - `index.html`: the whole app (layout, effects, sound, guide)
 - `assets/`: cracker photos (`anaar`, `chakri`, `sutli`, `ladi`, `rocket` as `.webp`) and `diwali.mp3`
+- `vercel.json`: security headers (CSP, no framing, camera limited to this site) and asset caching

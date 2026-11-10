@@ -418,14 +418,17 @@ const snd = {
     g.gain.exponentialRampToValueAtTime(Math.max(peak, .0002), t + a);
     g.gain.exponentialRampToValueAtTime(.0001, t + a + d);
   },
-  _noise(buf, t, dur, off) {
-    const s = this.ctx.createBufferSource(); s.buffer = buf; this.act++; s.onended = () => { this.act--; };
+  _noise(buf, t, dur, off, loop) {
+    const s = this.ctx.createBufferSource(); s.buffer = buf; s.loop = !!loop; this.act++; s.onended = () => { this.act--; };
     s.start(t, off == null ? Math.random() * 0.8 : off); s.stop(t + dur); return s;
   },
+  _osc(type) { const o = this.ctx.createOscillator(); o.type = type; this.act++; o.onended = () => { this.act--; return; }; return o; },
+  /* big sounds: one per type every few ms, and dropped when the mixer is already crowded (stops crackle + lag when tapping fast) */
+  _big(k, ms, max) { return this.act <= max && this._gate(k, ms); },
   _ok() { return this.ctx && this.on; },
   boom(size = 1) {
-    if (!this._ok()) return; const c = this.ctx, t = c.currentTime;
-    const o = c.createOscillator(); o.type = 'sine';
+    if (!this._ok() || !this._big('boom', 70, 52)) return; const c = this.ctx, t = c.currentTime;
+    const o = this._osc('sine');
     o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(34, t + .35);
     const og = c.createGain(); this._env(og, t, .005, size, .55);
     o.connect(og).connect(this.master); o.start(t); o.stop(t + .7);
@@ -438,22 +441,22 @@ const snd = {
     k.connect(kf).connect(kg).connect(this.master);
   },
   bang(size = 1) {   // short sharp cracker pop
-    if (!this._ok() || this._full(26) || !this._gate('bang', 45)) return; const c = this.ctx, t = c.currentTime;
+    if (!this._ok() || this._full(26) || !this._gate('bang', 60)) return; const c = this.ctx, t = c.currentTime;
     const n = this._noise(this.noise, t, .25), f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = rand(1800, 4200); f.Q.value = .6;
     const g = c.createGain(); this._env(g, t, .002, .8 * size, .14); n.connect(f).connect(g).connect(this.master);
-    const o = c.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(50, t + .1);
+    const o = this._osc('sine'); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(50, t + .1);
     const og = c.createGain(); this._env(og, t, .002, .5 * size, .12); o.connect(og).connect(this.master); o.start(t); o.stop(t + .2);
   },
   sutli() {   // big layered blast: sharp crack, deep thump, roaring body, rumble tail, debris crackle
-    if (!this._ok()) return; const c = this.ctx, t = c.currentTime, m = this.master;
+    if (!this._ok() || !this._big('sutli', 80, 52)) return; const c = this.ctx, t = c.currentTime, m = this.master;
     const n1 = this._noise(this.noise, t, .4, .1), hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 800;
     const g1 = c.createGain(); this._env(g1, t, .001, 1.5, .2); n1.connect(hp).connect(g1).connect(m);
-    const o = c.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(24, t + .55);
+    const o = this._osc('sine'); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(24, t + .55);
     const og = c.createGain(); this._env(og, t, .004, 2.2, 1); o.connect(og).connect(m); o.start(t); o.stop(t + 1.2);
-    const o2 = c.createOscillator(); o2.type = 'triangle'; o2.frequency.setValueAtTime(70, t); o2.frequency.exponentialRampToValueAtTime(30, t + .4);
+    const o2 = this._osc('triangle'); o2.frequency.setValueAtTime(70, t); o2.frequency.exponentialRampToValueAtTime(30, t + .4);
     const o2g = c.createGain(); this._env(o2g, t, .003, 1.2, .6); o2.connect(o2g).connect(m); o2.start(t); o2.stop(t + .8);
     const n2 = this._noise(this.noise, t, 1.6, .3), lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(8000, t); lp.frequency.exponentialRampToValueAtTime(140, t + 1.3);
-    const ws = c.createWaveShaper(), cu = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = i / 128 - 1; cu[i] = Math.tanh(x * 3.2); } ws.curve = cu;
+    const ws = c.createWaveShaper(); if (!this.cu) { this.cu = new Float32Array(256); for (let i = 0; i < 256; i++) this.cu[i] = Math.tanh((i / 128 - 1) * 3.2); } ws.curve = this.cu;
     const g2 = c.createGain(); this._env(g2, t, .003, 1.1, 1.4); n2.connect(lp).connect(ws).connect(g2).connect(m);
     const n3 = this._noise(this.noise, t + .04, 1.95, 0), lp2 = c.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = 200;
     const g3 = c.createGain(); this._env(g3, t + .04, .2, 1.3, 1.9); n3.connect(lp2).connect(g3).connect(m);
@@ -462,7 +465,7 @@ const snd = {
   },
 
   fuse(dur) {
-    if (!this._ok()) return; const c = this.ctx, t = c.currentTime;
+    if (!this._ok() || !this._big('fuse', 60, 40)) return; const c = this.ctx, t = c.currentTime;
     const n = this._noise(this.noise, t, dur, 0), f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 4000; f.Q.value = .9;
     const g = c.createGain(); this._env(g, t, .05, .22, dur - .05); n.connect(f).connect(g).connect(this.master);
     const k = this._noise(this.crackle, t, dur, 0), kf = c.createBiquadFilter(); kf.type = 'highpass'; kf.frequency.value = 2200;
@@ -487,8 +490,8 @@ const snd = {
       g.gain.exponentialRampToValueAtTime(.0001, t2 + .25); k.stop(t2 + .3); n.stop(t2 + .3); };
   },
   whistle(dur) {
-    if (!this._ok()) return; const c = this.ctx, t = c.currentTime;
-    const o = c.createOscillator(); o.type = 'sine';
+    if (!this._ok() || !this._big('whistle', 90, 40)) return; const c = this.ctx, t = c.currentTime;
+    const o = this._osc('sine');
     o.frequency.setValueAtTime(650, t); o.frequency.exponentialRampToValueAtTime(2600, t + dur);
     const g = c.createGain(); g.gain.setValueAtTime(.0001, t);
     g.gain.exponentialRampToValueAtTime(.06, t + .08); g.gain.setValueAtTime(.06, t + dur * .8); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
@@ -498,32 +501,28 @@ const snd = {
     n.connect(f).connect(ng).connect(this.master);
   },
   anaar(dur) {
-    if (!this._ok()) return; const c = this.ctx, t = c.currentTime;
-    const layer = (buf, type, freq, q, vol, t0, d) => {
-      const n = this._noise(buf, t0, d, 0), f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
-      const g = c.createGain(); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + (t0 === t ? .4 : .02));
-      g.gain.setValueAtTime(vol, Math.max(t0 + .03, t + dur - .9)); g.gain.exponentialRampToValueAtTime(.0001, t + dur + .5);
+    if (!this._ok() || !this._big('anaar', 140, 34)) return; const c = this.ctx, t = c.currentTime, end = t + dur + .5;
+    const layer = (buf, type, freq, q, vol) => {   // one looping source per layer (was 3 chunks each)
+      const n = this._noise(buf, t, dur + .6, 0, true), f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+      const g = c.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .4);
+      g.gain.setValueAtTime(vol, Math.max(t + .43, t + dur - .9)); g.gain.exponentialRampToValueAtTime(.0001, end);
       n.connect(f).connect(g).connect(this.master);
     };
-    for (let k = 0; k < 3; k++) { const t0 = t + 1.9 * k; if (t0 >= t + dur) break; const d = Math.min(2, dur - 1.9 * k + .6);
-      layer(this.noise, 'bandpass', 2400, .6, .3, t0, d); layer(this.noise, 'lowpass', 500, .7, .22, t0, d); layer(this.crackle, 'highpass', 1500, .7, .4, t0, d); }
+    layer(this.noise, 'bandpass', 2400, .6, .3); layer(this.noise, 'lowpass', 500, .7, .22); layer(this.crackle, 'highpass', 1500, .7, .4);
   },
   chakri(dur) {
-    if (!this._ok()) return; const c = this.ctx, t = c.currentTime;
-    const mk2 = (t0, d) => {
-      const n = this._noise(this.noise, t0, d, 0), f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
-      f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(3200, t + 1.3); f.frequency.setValueAtTime(3200, t + dur - .8);
-      f.frequency.exponentialRampToValueAtTime(1200, t + dur);
-      const trem = c.createGain(); trem.gain.value = .55;
-      const lfo = c.createOscillator(), lg = c.createGain(); lg.gain.value = .35;
-      lfo.frequency.setValueAtTime(5, t); lfo.frequency.linearRampToValueAtTime(18, t + 1.3); lfo.frequency.linearRampToValueAtTime(6, t + dur);
-      lfo.connect(lg).connect(trem.gain); lfo.start(t); lfo.stop(t + dur + .1);
-      const g = c.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.32, t + .4);
-      g.gain.setValueAtTime(.32, t + dur - .8); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-      n.connect(f).connect(trem).connect(g).connect(this.master);
-    };
-    mk2(t, 2); for (const k of [1, 2]) if (1.95 * k < dur) mk2(t + 1.95 * k, Math.min(2, dur - 1.95 * k + .1));
-    const kk = this._noise(this.crackle, t, 2, 0), kf = c.createBiquadFilter(); kf.type = 'highpass'; kf.frequency.value = 2500;
+    if (!this._ok() || !this._big('chakri', 140, 34)) return; const c = this.ctx, t = c.currentTime;
+    const n = this._noise(this.noise, t, dur + .1, 0, true), f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
+    f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(3200, t + 1.3); f.frequency.setValueAtTime(3200, t + Math.max(1.4, dur - .8));
+    f.frequency.exponentialRampToValueAtTime(1200, t + dur);
+    const trem = c.createGain(); trem.gain.value = .55;
+    const lfo = this._osc('sine'), lg = c.createGain(); lg.gain.value = .35;
+    lfo.frequency.setValueAtTime(5, t); lfo.frequency.linearRampToValueAtTime(18, t + 1.3); lfo.frequency.linearRampToValueAtTime(6, t + dur);
+    lfo.connect(lg).connect(trem.gain); lfo.start(t); lfo.stop(t + dur + .1);
+    const g = c.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.32, t + .4);
+    g.gain.setValueAtTime(.32, t + Math.max(.5, dur - .8)); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    n.connect(f).connect(trem).connect(g).connect(this.master);
+    const kk = this._noise(this.crackle, t, dur, 0, true), kf = c.createBiquadFilter(); kf.type = 'highpass'; kf.frequency.value = 2500;
     const kg = c.createGain(); this._env(kg, t, .3, .25, dur - .3); kk.connect(kf).connect(kg).connect(this.master);
   }
 };
@@ -1223,6 +1222,7 @@ async function startCamera() {
 }
 $('#bFlip').onclick = async () => { facing = facing === 'environment' ? 'user' : 'environment'; await startCamera(); };
 document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopRec();
   if (snd.ctx) document.hidden ? snd.ctx.suspend() : snd.ctx.resume();
   if (document.hidden) { if (snd.mfail) $('#bgm').pause(); } else if (started) playMusic();
   if (!document.hidden && started && stream && !stream.getVideoTracks().some(t => t.readyState === 'live')) startCamera();
@@ -1230,11 +1230,13 @@ document.addEventListener('visibilitychange', () => {
 
 function begin() { started = true; $('#start').style.display = 'none'; snd.init(); playMusic(); tourAuto(); }
 $('#go').onclick = async () => {
+  if (started || $('#go').disabled) return; $('#go').disabled = true;   // a second tap would start the camera and the tour twice
   snd.init(); playMusic(); $('#go').textContent = 'Starting…';
   const anchorP = wantAnchor(true);   // must be requested inside the tap for iOS
-  await startCamera(); await anchorP; begin();
+  try { await startCamera(); await anchorP; } catch (e) {}
+  begin();
 };
-$('#nocam').onclick = () => { wantAnchor(true); begin(); };
+$('#nocam').onclick = () => { if (started) return; $('#go').disabled = true; wantAnchor(true); begin(); };
 
 /* ---------- capture: photo + video (camera + fireworks composited) ---------- */
 function compose(c2, cw, ch) {
@@ -1263,7 +1265,7 @@ function showShot(blob, kind) {
   if (kind !== 'photo') { const r = el.play(); r && r.catch && r.catch(() => { el.muted = true; el.play().catch(() => {}); }); }
 }
 const shotName = () => 'diwali-crackers-' + Date.now() + (shotBlob.type.includes('mp4') ? '.mp4' : shotBlob.type.includes('webm') ? '.webm' : '.jpg');
-$('#shClose').onclick = () => { $('#shot').style.display = 'none'; $('#prev').innerHTML = ''; if (started) playMusic(); };
+$('#shClose').onclick = () => { $('#shot').style.display = 'none'; $('#prev').innerHTML = ''; if (shotUrl) { URL.revokeObjectURL(shotUrl); shotUrl = null; } shotBlob = null; if (started) playMusic(); };
 $('#shSave').onclick = () => {
   const a = document.createElement('a'); a.href = shotUrl; a.download = shotName(); document.body.appendChild(a); a.click(); a.remove(); say('Saved');
 };
